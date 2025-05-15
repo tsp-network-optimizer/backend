@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from app.services.graph_loader import get_graph
 from app.services.process_nodes import load_points_to_visit, process_points_into_graph
 
+from app.services.distance_matrix import build_distance_matrix_with_paths
+
 app = FastAPI()
 
 @app.get("/prueba")
@@ -28,6 +30,25 @@ def main():
 
     #nuevo estado del grafo, con las modificaciones
     print(f"Grafo actualizado: {G.number_of_nodes()} nodos, {G.number_of_edges()} aristas")
+
+
+
+
+
+    # crear matriz de distancias según los nodos que se quieren visitar
+    result = build_distance_matrix_with_paths(G, final_node_ids)
+
+    # imprimir matriz de distancias
+    print("\nMatriz de distancias:")
+    for row in result.distances:
+        print(["{:.1f}".format(val) if val != float("inf") else "∞" for val in row])
+
+    # imprimir caminos desde nodo i hasta nodo j
+    print("\nMatriz de caminos reales:")
+    for i in range(len(result.paths)):
+        for j in range(len(result.paths)):
+            if i != j:
+                print(f"De {final_node_ids[i]} a {final_node_ids[j]}: {result.paths[i][j]}")
 
 if __name__ == "__main__":
     main()
