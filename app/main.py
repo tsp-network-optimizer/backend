@@ -5,6 +5,10 @@ from app.services.process_nodes import load_points_to_visit, process_points_into
 
 from app.services.distance_matrix import build_distance_matrix_with_paths
 
+from app.services.tsp_solver import solve_tsp_brute_force
+from app.utils.path_utils import map_path_indices_to_ids, reconstruct_full_path
+
+
 app = FastAPI()
 
 @app.get("/prueba")
@@ -22,7 +26,7 @@ def main():
     # cargar los puntos desde .txt
     file_path = "data/points.txt" 
     points = load_points_to_visit(file_path)
-    print(f"Leídos {len(points)} puntos desde archivo.")
+    print(f"Leidos {len(points)} puntos desde archivo.")
 
     # procesar nuevos nodos leídos
     final_node_ids = process_points_into_graph(G, points)
@@ -36,19 +40,46 @@ def main():
 
 
     # crear matriz de distancias según los nodos que se quieren visitar
-    result = build_distance_matrix_with_paths(G, final_node_ids)
+    result_matrix = build_distance_matrix_with_paths(G, final_node_ids)
 
-    # imprimir matriz de distancias
-    print("\nMatriz de distancias:")
-    for row in result.distances:
-        print(["{:.1f}".format(val) if val != float("inf") else "∞" for val in row])
+    # # imprimir matriz de distancias
+    # print("\nMatriz de distancias:")
+    # for row in result_matrix.distances:
+    #     print(["{:.1f}".format(val) if val != float("inf") else "∞" for val in row])
 
-    # imprimir caminos desde nodo i hasta nodo j
-    print("\nMatriz de caminos reales:")
-    for i in range(len(result.paths)):
-        for j in range(len(result.paths)):
-            if i != j:
-                print(f"De {final_node_ids[i]} a {final_node_ids[j]}: {result.paths[i][j]}")
+    # # imprimir caminos desde nodo i hasta nodo j
+    # print("\nMatriz de caminos reales:")
+    # for i in range(len(result_matrix.paths)):
+    #     for j in range(len(result_matrix.paths)):
+    #         if i != j:
+    #             print(f"De {final_node_ids[i]} a {final_node_ids[j]}: {result_matrix.paths[i][j]}")
+
+
+
+    
+
+    # 8. ejecuta TSP por fuerza bruta
+    result_brute_force = solve_tsp_brute_force(result_matrix.distances)
+
+    # resultados
+    print("\nNombre del algoritmo usado:")
+    print(result_brute_force.algorithmName)
+    print("\nRuta optima por fuerza bruta (indices en matriz):")
+    print(result_brute_force.path)
+    print(f"Costo total: {result_brute_force.total_cost:.2f} metros")
+    print(f"Tiempo de ejecucion: {result_brute_force.execution_time:.4f} segundos")
+
+    # pasar de los ids del arreglo a ids reales del grafo
+    id_path = map_path_indices_to_ids(result_brute_force.path, final_node_ids)
+    print("\nRuta como IDs reales:")
+    print(id_path)
+
+    # reconstruir ruta completa en el grafo (para tener todos los nodos intermedios por los que se pasa)
+    full_real_path = reconstruct_full_path(result_brute_force.path, result_matrix.paths)
+    print("\nRuta completa con nodos intermedios incluidos:")
+    print(full_real_path)
+
+
 
 if __name__ == "__main__":
     main()
