@@ -1,52 +1,63 @@
 import networkx as nx #para grafos
-import random
 from geopy.distance import geodesic #para distancias
 
-
 import osmnx as ox #para cargar archivo OSM en el grafo
+
+from typing import BinaryIO
 
 # variable para el grafo, al inicio es nulo
 _loaded_graph: nx.Graph | None = None
 
 
 def get_graph() -> nx.Graph:
-    return load_graph()
+    if _loaded_graph is None:
+        raise ValueError("No graph has been loaded yet.")
+    return _loaded_graph
 
+#carga el grafo desde un archivo XML recibido (por upload)
+import networkx as nx
+import osmnx as ox
+from geopy.distance import geodesic
+from typing import BinaryIO
+import tempfile
 
+_loaded_graph: nx.Graph | None = None
 
-#carga datos al grafo usando archivo OSM en data/chapinero.osm
-def load_graph() -> nx.Graph:
+def get_graph() -> nx.Graph:
+    if _loaded_graph is None:
+        raise ValueError("No graph has been loaded yet.")
+    return _loaded_graph
+
+#carga el grafo desde un archivo XML recibido (por upload)
+def load_graph_from_file(file: BinaryIO) -> dict:
     global _loaded_graph
 
-    #si ya está cargado lo retorna
-    if _loaded_graph is not None:
-        return _loaded_graph
+    # Guardar archivo en un archivo temporal
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".osm") as temp:
+        temp.write(file.read())
+        temp_path = temp.name
 
-    filepath = "data/chapinero.osm" 
+    # Cargar el grafo desde el archivo temporal
+    G = ox.graph_from_xml(temp_path, simplify=True)
 
-    # carga el grafo según la ruta
-    G = ox.graph_from_xml(filepath, simplify=True)
-
-
-    # se convierte a grafo no dirigido
     if G.is_directed():
         G = G.to_undirected()
 
-    # Asegurar lat/lon en cada nodo
     for node_id, data in G.nodes(data=True):
         data["latitude"] = data.get("y")
         data["longitude"] = data.get("x")
 
-    # Calcular peso de la arista entre nodos (se usa distancia geodésica) 
     for u, v, data in G.edges(data=True):
         node_1 = G.nodes[u]
         node_2 = G.nodes[v]
-
         coord_1 = (node_1["latitude"], node_1["longitude"])
         coord_2 = (node_2["latitude"], node_2["longitude"])
-
-        dist = geodesic(coord_1, coord_2).meters
-        data["weight"] = dist
+        data["weight"] = geodesic(coord_1, coord_2).meters
 
     _loaded_graph = G
-    return G
+
+    return {
+        "status": "success",
+        "nodes": G.number_of_nodes(),
+        "edges": G.number_of_edges()
+    }
