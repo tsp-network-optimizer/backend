@@ -34,3 +34,64 @@ def solve_tsp_brute_force(distance_matrix: List[List[float]], start_index: int =
 
     return TSPResult(path=best_path, total_cost=min_cost, execution_time=execution_time, algorithmName = "Fuerza bruta")
   
+
+
+#ejecuta TSP usando programación dinámica -> Mediante held-karp (usa bitmasking )
+def solve_tsp_dynamic_programming(distance_matrix: List[List[float]], start_index: int = 0) -> TSPResult:
+    n = len(distance_matrix)
+    ALL_VISITED = (1 << n) - 1
+    dp = [[float('inf')] * n for _ in range(1 << n)]
+    parent = [[-1] * n for _ in range(1 << n)]
+    dp[1 << start_index][start_index] = 0
+    start_time = time.time()
+
+    for mask in range(1 << n):
+        for last in range(n):
+            if not (mask & (1 << last)):
+                continue
+            prev_mask = mask ^ (1 << last)
+            if prev_mask == 0 and last != start_index:
+                continue
+            if prev_mask == 0 and last == start_index:
+                continue
+            for k in range(n):
+                if not (prev_mask & (1 << k)):
+                    continue
+                cost = dp[prev_mask][k] + distance_matrix[k][last]
+                if cost < dp[mask][last]:
+                    dp[mask][last] = cost
+                    parent[mask][last] = k
+
+    min_cost = float('inf')
+    last_index = -1
+
+    for i in range(n):
+        if i == start_index:
+            continue
+        cost = dp[ALL_VISITED][i] + distance_matrix[i][start_index]
+
+        if cost < min_cost:
+            min_cost = cost
+            last_index = i
+
+    path = [start_index]
+    mask = ALL_VISITED
+    curr = last_index
+    
+    for _ in range(n - 1):
+        path.append(curr)
+        temp = parent[mask][curr]
+        mask ^= (1 << curr)
+        curr = temp
+
+    path.append(start_index)
+    path.reverse()
+    end_time = time.time()
+    execution_time = end_time - start_time
+    return TSPResult(path=path, total_cost=min_cost, execution_time=execution_time, algorithmName="Programacion Dinamica (Held-Karp)")
+
+
+
+
+
+    

@@ -8,6 +8,7 @@ from app.services.distance_matrix import build_distance_matrix_with_paths
 from app.services.tsp_solver import solve_tsp_brute_force
 from app.utils.path_utils import map_path_indices_to_ids, reconstruct_full_path
 
+from app.services.tsp_solver import solve_tsp_dynamic_programming
 
 app = FastAPI()
 
@@ -58,7 +59,7 @@ def main():
 
     
 
-    # 8. ejecuta TSP por fuerza bruta
+    #ejecuta TSP por fuerza bruta
     result_brute_force = solve_tsp_brute_force(result_matrix.distances)
 
     # resultados
@@ -79,6 +80,32 @@ def main():
     print("\nRuta completa con nodos intermedios incluidos:")
     print(full_real_path)
 
+
+
+
+    # Ejecutar el algoritmo de programación dinámica (Held-Karp)
+    result_dynamic = solve_tsp_dynamic_programming(result_matrix.distances)
+
+    print("\nNombre del algoritmo usado:")
+    print(result_dynamic.algorithmName)
+    print("\nRuta optima por programacion dinamica (indices en matriz):")
+    print(result_dynamic.path)
+    print(f"Costo total: {result_dynamic.total_cost:.2f} metros")
+    print(f"Tiempo de ejecucion: {result_dynamic.execution_time:.4f} segundos")
+
+    # Convertir índices a IDs reales
+    id_path_dynamic = map_path_indices_to_ids(result_dynamic.path, final_node_ids)
+    print("\nRuta como IDs reales:")
+    print(id_path_dynamic)
+
+    # Reconstruir ruta completa con nodos intermedios
+    full_real_path_dynamic = reconstruct_full_path(result_dynamic.path, result_matrix.paths)
+    print("\nRuta completa con nodos intermedios incluidos:")
+    print(full_real_path_dynamic)
+
+
+
+    
 
 
 if __name__ == "__main__":
