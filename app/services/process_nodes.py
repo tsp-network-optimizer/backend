@@ -12,13 +12,12 @@ def load_points_to_visit(filepath: str) -> List[Tuple[int, float, float]]:
     with open(filepath, 'r', encoding='utf-8') as file:
         for line in file:
             parts = line.strip().split()
-            #debe contener 3 campos por linea (id, latitud, longitud)
-            if len(parts) != 3:
-                continue  
-            node_id = int(parts[0])
-            lat = float(parts[1])
-            lon = float(parts[2])
-            points.append((node_id, lat, lon))
+             # contiene solo dos partes (lat y lon) ya que el id es autogenerado
+            if len(parts) != 2:
+                continue
+            lat = float(parts[0])
+            lon = float(parts[1])
+            points.append((lat, lon))
     return points
 
 
@@ -26,13 +25,13 @@ def load_points_to_visit(filepath: str) -> List[Tuple[int, float, float]]:
 
 
 #procesa cada nuevo nodo para validar si se debe insertar en el grafo
-def process_points_into_graph(G: nx.Graph, points: List[Tuple[int, float, float]]
+def process_points_into_graph(G: nx.Graph, points: List[Tuple[float, float]]
 ) -> List[int]:
     
     result_node_ids = []
     #recorre nodos nuevos (leídos en txt)
-    for node_id, lat, lon in points:
-        # Buscar nodo existente exacto (por coordenadas)
+    for lat, lon in points:
+        # Busca si el nodo ya existe según sus coordenadas
         existing = None
         #recorre los nodos que ya existen en el grafo
         for nid, data in G.nodes(data=True):
@@ -41,18 +40,23 @@ def process_points_into_graph(G: nx.Graph, points: List[Tuple[int, float, float]
                 break
 
         if existing is not None:
+            #no se inserta en el grafo pero si se agrega a la lista de nodos a recorrer
             result_node_ids.append(existing)
         else:
             # si el nodo no existe actualmente en el grafo, lo debe insertar
-            new_id = insert_node_into_graph(G, node_id, lat, lon)
-            result_node_ids.append(new_id)
+            # se genera automáticamente un nuevo ID secuencial
+            new_id = max(G.nodes) + 1 if G.number_of_nodes() > 0 else 0
+            inserted_id = insert_node_into_graph(G, new_id, lat, lon)
+            #agrega el nuevo nodo a la lista de nodos a recorrer
+            result_node_ids.append(inserted_id)
 
-    #retorno ids de todos los nodos
+    #retorno ids de todos los nodos que se tienen que recorrer
     return result_node_ids
 
 
 
-#inserta nuevos nodos en el grafo, para eso busca la arista mas cercana y la divide en 2
+
+#inserta nuevos nodos en el grafo, para eso busca la arista más cercana y la divide en 2
 def insert_node_into_graph(G: nx.Graph, new_id: int, lat: float, lon: float) -> int:
   
     new_point = Point(lat, lon)
