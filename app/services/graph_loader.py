@@ -61,3 +61,25 @@ def load_graph_from_file(file: BinaryIO) -> dict:
         "nodes": G.number_of_nodes(),
         "edges": G.number_of_edges()
     }
+
+
+
+
+
+
+def get_graph_data() -> dict:
+    if _loaded_graph is None:
+        raise ValueError("Graph not loaded yet.")
+
+    nodes = [
+        {"id": nid, "lat": data["latitude"], "lon": data["longitude"]}
+        for nid, data in _loaded_graph.nodes(data=True)
+    ]
+
+    edges = [
+        {"from": u, "to": v}
+        for u, v in _loaded_graph.edges()
+    ]
+
+    return {"nodes": nodes, "edges": edges}
+

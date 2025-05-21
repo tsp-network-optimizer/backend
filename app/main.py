@@ -4,6 +4,7 @@ import traceback
 
 
 from app.services.graph_loader import get_graph
+from app.services.graph_loader import get_graph_data
 from app.services.graph_loader import load_graph_from_file
 from app.services.process_nodes import load_points_to_visit, process_points_into_graph
 
@@ -39,6 +40,16 @@ async def upload_graph(file: UploadFile = File(...)):
     except Exception as e:
         traceback.print_exc() 
         raise HTTPException(status_code=500, detail=f"Error loading graph: {str(e)}")
+
+
+
+@app.get("/graph-data")
+def graph_data():
+    try:
+        return get_graph_data()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 
 
