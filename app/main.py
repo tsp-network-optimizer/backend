@@ -6,7 +6,7 @@ import traceback
 from app.services.graph_loader import get_graph
 from app.services.graph_loader import get_graph_data
 from app.services.graph_loader import load_graph_from_file
-from app.services.process_nodes import load_points_to_visit, process_points_into_graph
+from app.services.process_nodes import process_points_into_graph
 
 from app.services.distance_matrix import build_distance_matrix_with_paths
 
@@ -14,6 +14,9 @@ from app.services.tsp_solver import solve_tsp_brute_force
 from app.utils.path_utils import map_path_indices_to_ids, reconstruct_full_path
 
 from app.services.tsp_solver import solve_tsp_dynamic_programming
+
+from app.services.process_nodes import load_points_from_uploaded_file
+from app.services.graph_loader import get_graph
 
 
 
@@ -49,6 +52,25 @@ def graph_data():
         return get_graph_data()
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+
+
+@app.post("/upload-points")
+async def upload_points(file: UploadFile = File(...)):
+    try:
+        G = get_graph()
+        node_ids = load_points_from_uploaded_file(file.file, G)
+        return {
+            "status": "success",
+            "numPoints": len(node_ids),
+            "nodeIds": node_ids
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
 
 
 

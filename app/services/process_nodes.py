@@ -1,24 +1,36 @@
-from typing import List, Tuple
 import networkx as nx
 
 from shapely.geometry import Point, LineString
 from geopy.distance import geodesic
 
-#Esta función lee un archivo con los puntos a visitar. En este momento lo lee desde 
-    #data/points.txt pero en realidad se tiene que cargar desde la web
-def load_points_to_visit(filepath: str) -> List[Tuple[int, float, float]]:
+
+from typing import List, Tuple, BinaryIO
+
+_selected_node_ids: List[int] = []
+
+def get_selected_nodes() -> List[int]:
+    return _selected_node_ids
+
+#Esta función lee un archivo con los puntos a visitar.
+def load_points_from_uploaded_file(file: BinaryIO, G: nx.Graph) -> List[int]:
+    content = file.read().decode("utf-8")
+    lines = content.strip().splitlines()
     
     points = []
-    with open(filepath, 'r', encoding='utf-8') as file:
-        for line in file:
-            parts = line.strip().split()
-             # contiene solo dos partes (lat y lon) ya que el id es autogenerado
-            if len(parts) != 2:
-                continue
-            lat = float(parts[0])
-            lon = float(parts[1])
-            points.append((lat, lon))
-    return points
+    for line in lines:
+        parts = line.strip().split()
+        if len(parts) != 2:
+            continue
+        lat = float(parts[0])
+        lon = float(parts[1])
+        points.append((lat, lon))
+
+    node_ids = process_points_into_graph(G, points)
+
+    global _selected_node_ids
+    _selected_node_ids = node_ids
+
+    return node_ids
 
 
 
@@ -59,38 +71,45 @@ def process_points_into_graph(G: nx.Graph, points: List[Tuple[float, float]]
 #inserta nuevos nodos en el grafo, para eso busca la arista más cercana y la divide en 2
 def insert_node_into_graph(G: nx.Graph, new_id: int, lat: float, lon: float) -> int:
   
-    new_point = Point(lat, lon)
+    # 🔁 shapely espera coordenadas como (x, y) = (lon, lat)
+    new_point = Point(lon, lat)
     closest_edge = None
     min_distance = float("inf")
+    best_line = None  # guardará la geometría de la arista más cercana
 
     # Buscar la arista más cercana (por distancia perpendicular)
     for u, v in G.edges():
         u_data = G.nodes[u]
         v_data = G.nodes[v]
 
+        # 🔁 LineString con (lon, lat)
         line = LineString([
-            (u_data["latitude"], u_data["longitude"]),
-            (v_data["latitude"], v_data["longitude"])
+            (u_data["longitude"], u_data["latitude"]),
+            (v_data["longitude"], v_data["latitude"])
         ])
         distance = new_point.distance(line)
 
         if distance < min_distance:
             min_distance = distance
             closest_edge = (u, v)
+            best_line = line
 
-    if closest_edge is None:
+    if closest_edge is None or best_line is None:
         raise ValueError("No edge found to insert point")
 
     u, v = closest_edge
     coord_u = (G.nodes[u]["latitude"], G.nodes[u]["longitude"])
     coord_v = (G.nodes[v]["latitude"], G.nodes[v]["longitude"])
-    new_coord = (lat, lon)
+
+    # 🔁 proyectar el punto sobre la línea más cercana
+    projected = best_line.interpolate(best_line.project(new_point))
+    new_coord = (projected.y, projected.x)  # convertir de (x, y) a (lat, lon)
 
     # se elimina la arista original (ya que se debe dividir en 2)
     G.remove_edge(u, v)
 
     # se inserta el nuevo nodo
-    G.add_node(new_id, latitude=lat, longitude=lon)
+    G.add_node(new_id, latitude=new_coord[0], longitude=new_coord[1])
 
     # Conectar los extremos de la anterior arista con el nuevo nodo 
     dist_u = geodesic(coord_u, new_coord).meters
