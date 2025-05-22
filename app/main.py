@@ -134,6 +134,39 @@ def run_held_karp():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+#fuerza bruta
+@app.get("/tsp/brute-force")
+def run_brute_force():
+    try:
+        matrix = get_distance_matrix()
+        node_ids = get_selected_nodes()
+
+        if not matrix or not node_ids:
+            raise HTTPException(status_code=400, detail="Missing matrix or selected nodes.")
+
+        result = solve_tsp_brute_force(matrix.distances)
+
+        real_path = map_path_indices_to_ids(result.path, node_ids)
+        full_path = reconstruct_full_path(result.path, matrix.paths)
+
+        return {
+            "status": "success",
+            "result": {
+                "algorithmName": result.algorithmName,
+                "path": real_path,
+                "total_cost": result.total_cost,
+                "execution_time": result.execution_time
+            },
+            "fullPath": full_path
+        }
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 def main():
     # # simular grafo
