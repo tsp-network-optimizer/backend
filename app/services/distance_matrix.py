@@ -1,6 +1,23 @@
 import networkx as nx
 from typing import List
 from app.models.distance_matrix_result import DistanceMatrixResult
+from typing import Optional
+
+
+
+
+
+_last_distance_matrix: Optional[DistanceMatrixResult] = None
+
+def get_distance_matrix() -> DistanceMatrixResult:
+    if _last_distance_matrix is None:
+        raise ValueError("Distance matrix has not been built yet.")
+    return _last_distance_matrix
+
+def set_distance_matrix(matrix: DistanceMatrixResult):
+    global _last_distance_matrix
+    _last_distance_matrix = matrix
+
 
 #construye matriz de distancia para usar en los algoritmos
 #recibe grafo y lista de nodos que se quieren visitar, retorna objeto con matriz de distancias y caminos
