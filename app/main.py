@@ -102,6 +102,37 @@ def build_matrix():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+#solución de TSP para programación dinámica
+@app.get("/tsp/dynamic")
+def run_held_karp():
+    try:
+        matrix = get_distance_matrix()
+        node_ids = get_selected_nodes()
+
+        if not matrix or not node_ids:
+            raise HTTPException(status_code=400, detail="Missing matrix or selected nodes.")
+
+        result = solve_tsp_dynamic_programming(matrix.distances)
+
+        real_path = map_path_indices_to_ids(result.path, node_ids)
+        full_path = reconstruct_full_path(result.path, matrix.paths)
+
+        return {
+            "status": "success",
+            "result": {
+                "algorithmName": result.algorithmName,
+                "path": real_path,  # esto para las estadísticas
+                "total_cost": result.total_cost,
+                "execution_time": result.execution_time
+            },
+            "fullPath": full_path  # esto se dibuja en el mapa (con nodos intermedios)
+        }
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 def main():
