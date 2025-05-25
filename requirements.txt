@@ -6,3 +6,6 @@ pandas
 osmnx
 python-multipart
 geopy
+pytest
+pytest-asyncio
+httpx
