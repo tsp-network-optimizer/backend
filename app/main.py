@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import traceback
@@ -103,6 +104,53 @@ def build_matrix():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def limit_nodes_and_get_mapping(distance_matrix: List[List[float]], node_ids: List, algorithm: str, start_index: int = 0):
+    """
+    Limita nodos según el algoritmo y retorna la matriz limitada y el mapeo de IDs.
+    """
+    n = len(distance_matrix)
+    
+    if algorithm.lower() in ["brute_force", "fuerza_bruta", "brute"]:
+        max_nodes = 12
+    elif algorithm.lower() in ["dynamic_programming", "programacion_dinamica", "held_karp", "dp"]:
+        max_nodes = 20
+    else:  # Greedy u otros algoritmos
+        max_nodes = n  # Sin límite para Greedy
+    
+    if n <= max_nodes:
+        return distance_matrix, node_ids, start_index
+    
+    # Seleccionar los primeros max_nodes nodos
+    selected_indices = list(range(max_nodes))
+    
+    # Si start_index no está en los primeros max_nodes, intercambiarlo con el primero
+    if start_index >= max_nodes:
+        selected_indices[0] = start_index
+        selected_indices = sorted(selected_indices)
+        adjusted_start_index = selected_indices.index(start_index)
+    else:
+        adjusted_start_index = start_index
+    
+    # Crear la nueva matriz de distancias limitada
+    limited_matrix = []
+    for i in selected_indices:
+        row = []
+        for j in selected_indices:
+            row.append(distance_matrix[i][j])
+        limited_matrix.append(row)
+    
+    # Crear la lista limitada de node_ids
+    limited_node_ids = [node_ids[i] for i in selected_indices]
+    
+    print(f"Algoritmo: {algorithm}")
+    print(f"Nodos originales: {n}, Nodos limitados: {len(limited_matrix)}")
+    print(f"Índices seleccionados: {selected_indices}")
+    
+    return limited_matrix, limited_node_ids, adjusted_start_index
+
+
+# Endpoints modificados para FastAPI:
+
 #solución de TSP para programación dinámica
 @app.get("/tsp/dynamic")
 def run_held_karp():
@@ -113,9 +161,14 @@ def run_held_karp():
         if not matrix or not node_ids:
             raise HTTPException(status_code=400, detail="Missing matrix or selected nodes.")
 
-        result = solve_tsp_dynamic_programming(matrix.distances)
+        # Limitar nodos para programación dinámica (máximo 20)
+        limited_matrix, limited_node_ids, adjusted_start_index = limit_nodes_and_get_mapping(
+            matrix.distances, node_ids, "dynamic_programming", start_index=0
+        )
 
-        real_path = map_path_indices_to_ids(result.path, node_ids)
+        result = solve_tsp_dynamic_programming(limited_matrix, adjusted_start_index)
+
+        real_path = map_path_indices_to_ids(result.path, limited_node_ids)
         full_path = reconstruct_full_path(result.path, matrix.paths)
 
         return {
@@ -124,7 +177,9 @@ def run_held_karp():
                 "algorithmName": result.algorithmName,
                 "path": real_path,  # esto para las estadísticas
                 "total_cost": result.total_cost,
-                "execution_time": result.execution_time
+                "execution_time": result.execution_time,
+                "nodes_used": len(limited_node_ids),  # Información adicional
+                "total_nodes_available": len(node_ids)
             },
             "fullPath": full_path  # esto se dibuja en el mapa (con nodos intermedios)
         }
@@ -145,9 +200,14 @@ def run_brute_force():
         if not matrix or not node_ids:
             raise HTTPException(status_code=400, detail="Missing matrix or selected nodes.")
 
-        result = solve_tsp_brute_force(matrix.distances)
+        # Limitar nodos para fuerza bruta (máximo 12)
+        limited_matrix, limited_node_ids, adjusted_start_index = limit_nodes_and_get_mapping(
+            matrix.distances, node_ids, "brute_force", start_index=0
+        )
 
-        real_path = map_path_indices_to_ids(result.path, node_ids)
+        result = solve_tsp_brute_force(limited_matrix, adjusted_start_index)
+
+        real_path = map_path_indices_to_ids(result.path, limited_node_ids)
         full_path = reconstruct_full_path(result.path, matrix.paths)
 
         return {
@@ -156,7 +216,9 @@ def run_brute_force():
                 "algorithmName": result.algorithmName,
                 "path": real_path,
                 "total_cost": result.total_cost,
-                "execution_time": result.execution_time
+                "execution_time": result.execution_time,
+                "nodes_used": len(limited_node_ids),  # Información adicional
+                "total_nodes_available": len(node_ids)
             },
             "fullPath": full_path
         }
@@ -165,7 +227,6 @@ def run_brute_force():
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-    
 
 
 # Greedy (vecino más cercano)
@@ -178,9 +239,14 @@ def run_greedy():
         if not matrix or not node_ids:
             raise HTTPException(status_code=400, detail="Missing matrix or selected nodes.")
 
-        result = solve_tsp_greedy(matrix.distances)
+        # Greedy puede manejar todos los nodos, pero usamos la misma función por consistencia
+        limited_matrix, limited_node_ids, adjusted_start_index = limit_nodes_and_get_mapping(
+            matrix.distances, node_ids, "greedy", start_index=0
+        )
 
-        real_path = map_path_indices_to_ids(result.path, node_ids)
+        result = solve_tsp_greedy(limited_matrix, adjusted_start_index)
+
+        real_path = map_path_indices_to_ids(result.path, limited_node_ids)
         full_path = reconstruct_full_path(result.path, matrix.paths)
 
         return {
@@ -189,7 +255,9 @@ def run_greedy():
                 "algorithmName": result.algorithmName,
                 "path": real_path,  # esto para las estadísticas
                 "total_cost": result.total_cost,
-                "execution_time": result.execution_time
+                "execution_time": result.execution_time,
+                "nodes_used": len(limited_node_ids),  # Información adicional
+                "total_nodes_available": len(node_ids)
             },
             "fullPath": full_path  # esto se dibuja en el mapa (con nodos intermedios)
         }
@@ -198,7 +266,6 @@ def run_greedy():
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
 
 def main():
     # # simular grafo

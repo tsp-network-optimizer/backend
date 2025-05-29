@@ -33,7 +33,6 @@ def solve_tsp_brute_force(distance_matrix: List[List[float]], start_index: int =
     execution_time = end_time - start_time
 
     return TSPResult(path=best_path, total_cost=min_cost, execution_time=execution_time, algorithmName = "Fuerza bruta")
-  
 
 
 #ejecuta TSP usando programación dinámica -> Mediante held-karp (usa bitmasking )
@@ -128,3 +127,47 @@ def solve_tsp_greedy(distance_matrix: List[List[float]], start_index: int = 0) -
     execution_time = end_time - start_time
     
     return TSPResult(path=path, total_cost=total_cost, execution_time=execution_time, algorithmName="Greedy (Vecino mas cercano)")
+
+
+def limit_nodes_for_algorithm(distance_matrix: List[List[float]], algorithm: str, start_index: int = 0) -> List[List[float]]:
+    """
+    Limita la matriz de distancias según el algoritmo seleccionado.
+    - Fuerza bruta: máximo 12 nodos
+    - Programación dinámica: máximo 20 nodos
+    - Greedy: puede manejar todos los nodos (50)
+    """
+    n = len(distance_matrix)
+    
+    if algorithm.lower() in ["brute_force", "fuerza_bruta", "brute"]:
+        max_nodes = 12
+    elif algorithm.lower() in ["dynamic_programming", "programacion_dinamica", "held_karp", "dp"]:
+        max_nodes = 20
+    else:  # Greedy u otros algoritmos
+        max_nodes = n  # Sin límite para Greedy
+    
+    if n <= max_nodes:
+        return distance_matrix
+    
+    # Seleccionar los primeros max_nodes nodos (incluyendo el start_index)
+    selected_nodes = list(range(max_nodes))
+    
+    # Si start_index no está en los primeros max_nodes, intercambiarlo
+    if start_index >= max_nodes:
+        selected_nodes[0] = start_index
+        selected_nodes = sorted(selected_nodes)
+    
+    # Crear la nueva matriz de distancias limitada
+    limited_matrix = []
+    for i in selected_nodes:
+        row = []
+        for j in selected_nodes:
+            row.append(distance_matrix[i][j])
+        limited_matrix.append(row)
+    
+    print(f"Algoritmo: {algorithm}")
+    print(f"Nodos originales: {n}, Nodos limitados: {len(limited_matrix)}")
+    print(f"Nodos seleccionados: {selected_nodes}")
+    
+    return limited_matrix
+
+
