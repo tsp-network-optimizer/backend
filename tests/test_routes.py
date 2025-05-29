@@ -85,9 +85,9 @@ def setup_tsp(monkeypatch):
         total_cost = 1.23
         execution_time = 0.004
 
-    monkeypatch.setattr(main, "solve_tsp_brute_force", lambda d: Resultado())
-    monkeypatch.setattr(main, "solve_tsp_greedy", lambda d: Resultado())
-    monkeypatch.setattr(main, "solve_tsp_dynamic_programming", lambda d: Resultado())
+    monkeypatch.setattr(main, "solve_tsp_brute_force", lambda d, i: Resultado())
+    monkeypatch.setattr(main, "solve_tsp_greedy", lambda d, i: Resultado())
+    monkeypatch.setattr(main, "solve_tsp_dynamic_programming", lambda d, i: Resultado())
     monkeypatch.setattr(main, "reconstruct_full_path", lambda path, paths: [])
 
 
@@ -182,11 +182,12 @@ def test_tsp_varias_cantidades(client, monkeypatch, nodes, fake_path, expected_m
         execution_time = 0.123
 
     if "brute-force" in endpoint:
-        monkeypatch.setattr(main, "solve_tsp_brute_force", lambda d: Resultado())
+        monkeypatch.setattr(main, "solve_tsp_brute_force", lambda d, i: Resultado())
     elif "greedy" in endpoint:
-        monkeypatch.setattr(main, "solve_tsp_greedy", lambda d: Resultado())
+        monkeypatch.setattr(main, "solve_tsp_greedy", lambda d, i: Resultado())
     else:
-        monkeypatch.setattr(main, "solve_tsp_dynamic_programming", lambda d: Resultado())
+        monkeypatch.setattr(main, "solve_tsp_dynamic_programming", lambda d, i: Resultado())
+
 
     r = client.get(endpoint)
     assert r.status_code == 200
