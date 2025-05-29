@@ -91,7 +91,40 @@ def solve_tsp_dynamic_programming(distance_matrix: List[List[float]], start_inde
     return TSPResult(path=path, total_cost=min_cost, execution_time=execution_time, algorithmName="Programacion Dinamica (Held-Karp)")
 
 
-
-
-
+#ejecuta TSP usando algoritmo Greedy (vecino más cercano)
+def solve_tsp_greedy(distance_matrix: List[List[float]], start_index: int = 0) -> TSPResult:
+    n = len(distance_matrix)
+    visited = [False] * n
+    path = [start_index]
+    visited[start_index] = True
+    total_cost = 0.0
     
+    start_time = time.time()
+    
+    current_node = start_index
+    
+    # Visitar n-1 nodos restantes eligiendo siempre el más cercano no visitado
+    for _ in range(n - 1):
+        min_distance = float('inf')
+        next_node = -1
+        
+        # Buscar el nodo más cercano no visitado
+        for j in range(n):
+            if not visited[j] and distance_matrix[current_node][j] < min_distance:
+                min_distance = distance_matrix[current_node][j]
+                next_node = j
+        
+        # Moverse al siguiente nodo
+        path.append(next_node)
+        visited[next_node] = True
+        total_cost += min_distance
+        current_node = next_node
+    
+    # Regresar al nodo inicial para completar el ciclo
+    path.append(start_index)
+    total_cost += distance_matrix[current_node][start_index]
+    
+    end_time = time.time()
+    execution_time = end_time - start_time
+    
+    return TSPResult(path=path, total_cost=total_cost, execution_time=execution_time, algorithmName="Greedy (Vecino mas cercano)")
